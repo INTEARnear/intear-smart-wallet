@@ -121,5 +121,6 @@ Where:
 ## Deployments
 
 This is a global smart contract, where deployments are referenced by `code_hash`. Current deployments with commits:
-
-_Currently none_
+| Commit | Code Hash | Network |
+|--------|-----------|---------|
+| [39d53f8426c58481262d7a83f900f2ad32f5261d](https://github.com/INTEARnear/intear-smart-wallet/tree/39d53f8426c58481262d7a83f900f2ad32f5261d) | `Cznw3ewddP9KxNshCCAcNsVkBeJYAAvkT4qcpvva3Bh2` | Testnet |
