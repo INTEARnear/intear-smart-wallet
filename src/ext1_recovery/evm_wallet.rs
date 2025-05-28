@@ -11,7 +11,7 @@ use near_sdk::{
     near,
     serde::{Deserialize, Serialize},
 };
-use regex::Regex;
+use regex_lite::Regex;
 #[cfg(feature = "abi")]
 use std::collections::BTreeMap;
 
@@ -79,7 +79,7 @@ impl EvmRecoveryMethod {
     pub fn check(&self, message: &str) -> Option<PublicKey> {
         let current_account_id = near_sdk::env::current_account_id();
 
-        let Ok(signature) = serde_json::from_str::<EvmSignature>(message) else {
+        let Ok(signature) = near_sdk::serde_json::from_str::<EvmSignature>(message) else {
             return None;
         };
 

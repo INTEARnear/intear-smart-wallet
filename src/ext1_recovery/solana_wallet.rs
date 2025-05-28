@@ -3,7 +3,7 @@ use near_sdk::{
     PublicKey, bs58, near,
     serde::{self, Deserialize, Serialize},
 };
-use regex::Regex;
+use regex_lite::Regex;
 use solana_signature::Signature;
 
 use super::SIGNATURE_DURATION;
@@ -57,7 +57,7 @@ impl SolanaRecoveryMethod {
     pub fn check(&self, message: &str) -> Option<PublicKey> {
         let current_account_id = near_sdk::env::current_account_id();
 
-        let Ok(signature) = serde_json::from_str::<SolanaSignature>(message) else {
+        let Ok(signature) = near_sdk::serde_json::from_str::<SolanaSignature>(message) else {
             return None;
         };
 
