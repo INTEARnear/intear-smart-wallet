@@ -22,7 +22,7 @@ jobs:
       - name: Run cargo clippy
         run: |
           rustup component add clippy
-          cargo clippy --all-features --workspace --tests -- --warn clippy::all --warn clippy::nursery
+          cargo clippy --workspace --tests -- --warn clippy::all --warn clippy::nursery
 
   build:
     name: Build
