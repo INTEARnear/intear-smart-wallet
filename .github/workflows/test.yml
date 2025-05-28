@@ -1,6 +1,8 @@
 name: Test
+
 on:
-  workflow_call:
+  push:
+    branches: [ main ]
 
 jobs:
   code-formatting:
@@ -21,6 +23,17 @@ jobs:
         run: |
           rustup component add clippy
           cargo clippy --all-features --workspace --tests -- --warn clippy::all --warn clippy::nursery
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install cargo-near CLI
+        run: cargo install cargo-near
+      - name: Build reproducible WASM
+        run: cargo near build reproducible-wasm
 
   tests:
     name: Tests
