@@ -10,6 +10,7 @@ use super::SIGNATURE_DURATION;
 
 // `solana-pubkey` crate doesn't compile to wasm
 #[near(serializers=[borsh])]
+#[derive(Clone, Copy)]
 pub struct Pubkey(pub [u8; 32]);
 
 impl Serialize for Pubkey {
@@ -46,6 +47,7 @@ pub struct SolanaSignature {
 }
 
 #[near(serializers=[json, borsh])]
+#[derive(Clone)]
 pub struct SolanaRecoveryMethod {
     #[cfg_attr(feature = "abi", schemars(with = "String"))]
     pub recovery_wallet_address: Pubkey,
@@ -97,7 +99,3 @@ impl SolanaRecoveryMethod {
         Some(public_key)
     }
 }
-
-// mod solana_pubkey {
-//     pub struct Pubkey(pub(crate) [u8; 32]);
-// }

@@ -49,4 +49,4 @@ panic = "abort"
 overflow-checks = true
 
 [features]
-abi = []
+abi = ["near-sdk/__abi-generate"]

@@ -22,7 +22,7 @@ jobs:
       - name: Run cargo clippy
         run: |
           rustup component add clippy
-          cargo clippy --workspace --tests -- --warn clippy::all --warn clippy::nursery
+          cargo clippy --all-features --workspace --tests -- --warn clippy::all --warn clippy::nursery
 
   build:
     name: Build
@@ -31,7 +31,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Install cargo-near CLI
-        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-vcargo-near-new-ci-tool-version-self/cargo-near-installer.sh | sh
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.16.0/cargo-near-installer.sh | sh
       - name: Build reproducible WASM
         run: cargo near build reproducible-wasm
 

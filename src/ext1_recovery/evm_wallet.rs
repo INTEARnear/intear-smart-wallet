@@ -27,6 +27,7 @@ pub struct EvmSignature {
 }
 
 #[near(serializers=[json, borsh])]
+#[derive(Clone)]
 pub struct EvmRecoveryMethod {
     #[cfg_attr(
         not(feature = "abi"),
@@ -103,8 +104,6 @@ impl EvmRecoveryMethod {
         };
         let nonce = nonce.with_timezone(&Utc);
 
-        near_sdk::log!("{}", nonce.timestamp_millis());
-        near_sdk::log!("{}", near_sdk::env::block_timestamp_ms());
         if nonce.timestamp_millis() > near_sdk::env::block_timestamp_ms() as i64
             || (nonce.timestamp_millis() as u128)
                 < near_sdk::env::block_timestamp_ms() as u128 - SIGNATURE_DURATION.as_millis()

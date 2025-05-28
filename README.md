@@ -58,7 +58,7 @@ Recovers the account by adding a full access key using a valid signature from on
 
 ##### EVM Recovery Method
 
-For Ethereum-compatible wallets using EIP-712 signatures.
+For Ethereum-compatible wallets using ERC-191 (`personal_sign`) signatures.
 
 **Structure:**
 ```json
