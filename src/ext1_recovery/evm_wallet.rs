@@ -15,12 +15,14 @@ use regex::Regex;
 #[cfg(feature = "abi")]
 use std::collections::BTreeMap;
 
-use crate::SIGNATURE_DURATION;
+use super::SIGNATURE_DURATION;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct EvmSignature {
     pub signature: Signature,
+    /// Example message: 'I want to sign in to alice.near with key ed25519:HbRkc1dTdSLwA1wFTDVNxJE4PCQVmpwwXwTzTGrqdhaP. The current date is 2025-01-01T00:00:00Z UTC'
+    /// The date should be within [`SIGNATURE_DURATION`] of the current date, but not in the future.
     pub message: String,
 }
 

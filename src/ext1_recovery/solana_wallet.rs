@@ -6,7 +6,7 @@ use near_sdk::{
 use regex::Regex;
 use solana_signature::Signature;
 
-use crate::SIGNATURE_DURATION;
+use super::SIGNATURE_DURATION;
 
 // `solana-pubkey` crate doesn't compile to wasm
 #[near(serializers=[borsh])]
@@ -40,6 +40,8 @@ impl<'de> Deserialize<'de> for Pubkey {
 #[serde(crate = "near_sdk::serde")]
 pub struct SolanaSignature {
     pub signature: Signature,
+    /// Example message: 'I want to sign in to alice.near with key ed25519:HbRkc1dTdSLwA1wFTDVNxJE4PCQVmpwwXwTzTGrqdhaP. The current date is 2025-01-01T00:00:00Z UTC'
+    /// The date should be within [`SIGNATURE_DURATION`] of the current date, but not in the future.
     pub message: String,
 }
 

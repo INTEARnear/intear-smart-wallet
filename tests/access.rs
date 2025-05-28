@@ -1,104 +1,56 @@
 use alloy_signer::SignerSync;
 use alloy_signer_local::LocalSigner;
-use intear_smart_wallet::EvmRecoveryMethod;
-use intear_smart_wallet::RecoveryMethod;
-use near_workspaces::types::PublicKey as WorkspacesPublicKey;
-
-#[tokio::test]
-async fn test_cannot_call_new_twice() -> anyhow::Result<()> {
-    let worker = near_workspaces::sandbox().await?;
-    let contract_wasm = near_workspaces::compile_project("./").await?;
-
-    let evm_signer = LocalSigner::random();
-    let recovery_method = RecoveryMethod::Evm(EvmRecoveryMethod {
-        recovery_wallet_address: evm_signer.address(),
-    });
-
-    // Deploy and initialize contract
-    let contract = worker.dev_deploy(&contract_wasm).await?;
-
-    contract
-        .call("new")
-        .args_json(serde_json::json!({"initial_recovery_method": recovery_method}))
-        .transact()
-        .await?
-        .into_result()?;
-
-    // Try to call new again - this should fail
-    let recovery_method2 = RecoveryMethod::Evm(EvmRecoveryMethod {
-        recovery_wallet_address: evm_signer.address(),
-    });
-
-    let second_init_result = contract
-        .call("new")
-        .args_json(serde_json::json!({"initial_recovery_method": recovery_method2}))
-        .transact()
-        .await?
-        .into_result();
-
-    assert!(
-        second_init_result.is_err(),
-        "Should not be able to call new() twice on the same contract"
-    );
-
-    Ok(())
-}
+use intear_smart_wallet::ext1_recovery::{RecoveryMethod, evm_wallet::EvmRecoveryMethod};
+use near_workspaces::types::{KeyType, SecretKey};
 
 #[tokio::test]
 async fn test_cannot_call_private_methods_from_different_account() -> anyhow::Result<()> {
     let worker = near_workspaces::sandbox().await?;
     let contract_wasm = near_workspaces::compile_project("./").await?;
 
-    let evm_signer = LocalSigner::random();
-    let recovery_method = RecoveryMethod::Evm(EvmRecoveryMethod {
-        recovery_wallet_address: evm_signer.address(),
-    });
-
-    // Deploy and initialize contract
+    // Deploy contract (uses Default initialization automatically)
     let contract = worker.dev_deploy(&contract_wasm).await?;
-
-    contract
-        .call("new")
-        .args_json(serde_json::json!({"initial_recovery_method": recovery_method}))
-        .transact()
-        .await?
-        .into_result()?;
 
     // Create a different user account
     let user_account = worker.dev_create_account().await?;
 
-    // Try to call set_recovery_methods from different account - should fail
+    // Try to call ext1_set_recovery_methods from different account - should fail
     let new_recovery_method = RecoveryMethod::Evm(EvmRecoveryMethod {
         recovery_wallet_address: LocalSigner::random().address(),
     });
 
     let set_result = user_account
-        .call(contract.id(), "set_recovery_methods")
+        .call(contract.id(), "ext1_set_recovery_methods")
         .args_json(serde_json::json!({"recovery_methods": vec![new_recovery_method]}))
+        .max_gas()
         .transact()
         .await?
         .into_result();
 
     assert!(
         set_result.is_err(),
-        "Should not be able to call set_recovery_methods from different account"
+        "Should not be able to call ext1_set_recovery_methods from different account"
     );
 
-    // Try to call add_recovery_method from different account - should fail
+    // Try to call ext1_add_recovery_method from different account - should fail
     let add_recovery_method = RecoveryMethod::Evm(EvmRecoveryMethod {
         recovery_wallet_address: LocalSigner::random().address(),
     });
 
     let add_result = user_account
-        .call(contract.id(), "add_recovery_method")
-        .args_json(serde_json::json!({"recovery_method": add_recovery_method}))
+        .call(contract.id(), "ext1_add_recovery_method")
+        .args_json(serde_json::json!({
+            "recovery_method": add_recovery_method,
+            "message": "dummy_message"
+        }))
+        .max_gas()
         .transact()
         .await?
         .into_result();
 
     assert!(
         add_result.is_err(),
-        "Should not be able to call add_recovery_method from different account"
+        "Should not be able to call ext1_add_recovery_method from different account"
     );
 
     Ok(())
@@ -109,31 +61,27 @@ async fn test_can_call_recover_from_different_account() -> anyhow::Result<()> {
     let worker = near_workspaces::sandbox().await?;
     let contract_wasm = near_workspaces::compile_project("./").await?;
 
+    // Deploy contract (uses Default initialization automatically)
+    let contract = worker.dev_deploy(&contract_wasm).await?;
+
     let evm_signer = LocalSigner::random();
     let recovery_method = RecoveryMethod::Evm(EvmRecoveryMethod {
         recovery_wallet_address: evm_signer.address(),
     });
 
-    // Deploy and initialize contract
-    let contract = worker.dev_deploy(&contract_wasm).await?;
-
-    contract
-        .call("new")
-        .args_json(serde_json::json!({"initial_recovery_method": recovery_method}))
-        .transact()
+    // Use existing public key for add_recovery_method
+    let existing_public_key = contract
+        .view_access_keys()
         .await?
-        .into_result()?;
-
-    // Create a different user account
-    let user_account = worker.dev_create_account().await?;
-
-    // Prepare recovery message
-    let target_public_key = "ed25519:HbRkc1dTdSLwA1wFTDVNxJE4PCQVmpwwXwTzTGrqdhaP";
+        .into_iter()
+        .next()
+        .unwrap()
+        .public_key;
     let current_time = chrono::Utc::now().to_rfc3339();
     let message = format!(
         "I want to sign in to {} with key {}. The current date is {} UTC",
         contract.id(),
-        target_public_key,
+        existing_public_key,
         current_time
     );
 
@@ -141,30 +89,66 @@ async fn test_can_call_recover_from_different_account() -> anyhow::Result<()> {
         .sign_message_sync(message.as_bytes())
         .expect("Failed to sign message");
 
-    let signature_json = serde_json::to_string(&intear_smart_wallet::evm::EvmSignature {
-        signature: signature,
-        message: message.clone(),
-    })?;
+    let signature_json = serde_json::to_string(
+        &intear_smart_wallet::ext1_recovery::evm_wallet::EvmSignature {
+            signature,
+            message: message.clone(),
+        },
+    )?;
 
-    // Call recover from different account - should succeed
+    // Add recovery method from contract account
+    contract
+        .call("ext1_add_recovery_method")
+        .args_json(serde_json::json!({
+            "recovery_method": recovery_method,
+            "message": signature_json.clone()
+        }))
+        .max_gas()
+        .transact()
+        .await?
+        .into_result()?;
+
+    // Create a different user account
+    let user_account = worker.dev_create_account().await?;
+
+    // Use a different random public key for recovery testing
+    let target_public_key = SecretKey::from_random(KeyType::ED25519).public_key();
+    let recovery_message = format!(
+        "I want to sign in to {} with key {}. The current date is {} UTC",
+        contract.id(),
+        target_public_key,
+        current_time
+    );
+
+    let recovery_signature = evm_signer
+        .sign_message_sync(recovery_message.as_bytes())
+        .expect("Failed to sign message");
+
+    let recovery_signature_json = serde_json::to_string(
+        &intear_smart_wallet::ext1_recovery::evm_wallet::EvmSignature {
+            signature: recovery_signature,
+            message: recovery_message.clone(),
+        },
+    )?;
+
+    // Call ext1_recover from different account - should succeed
     let recover_result = user_account
-        .call(contract.id(), "recover")
-        .args_json(serde_json::json!({"message": signature_json}))
-        .gas(near_workspaces::types::Gas::from_tgas(300))
+        .call(contract.id(), "ext1_recover")
+        .args_json(serde_json::json!({"message": recovery_signature_json}))
+        .max_gas()
         .transact()
         .await?
         .into_result();
 
     assert!(
         recover_result.is_ok(),
-        "Should be able to call recover from different account"
+        "Should be able to call ext1_recover from different account"
     );
 
-    // Verify that the public key was actually added
-    let target_public_key_parsed: WorkspacesPublicKey = target_public_key.parse()?;
+    // Verify that the new public key was actually added
     let access_key_result = contract
         .as_account()
-        .view_access_key(&target_public_key_parsed)
+        .view_access_key(&target_public_key)
         .await;
 
     assert!(

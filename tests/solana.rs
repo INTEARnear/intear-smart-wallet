@@ -1,6 +1,5 @@
-use intear_smart_wallet::RecoveryMethod;
-use intear_smart_wallet::SolanaRecoveryMethod;
-use near_workspaces::types::PublicKey as WorkspacesPublicKey;
+use intear_smart_wallet::ext1_recovery::{RecoveryMethod, solana_wallet::SolanaRecoveryMethod};
+use near_workspaces::types::{KeyType, SecretKey};
 use solana_signer::Signer;
 
 #[tokio::test]
@@ -14,49 +13,82 @@ async fn test_solana_recovery_success() -> anyhow::Result<()> {
 
     // Create Solana recovery method
     let recovery_method = RecoveryMethod::Solana(SolanaRecoveryMethod {
-        recovery_wallet_address: intear_smart_wallet::solana::Pubkey(solana_pubkey_bytes),
+        recovery_wallet_address: intear_smart_wallet::ext1_recovery::solana_wallet::Pubkey(
+            solana_pubkey_bytes,
+        ),
     });
 
     let contract = worker.dev_deploy(&contract_wasm).await?;
 
+    // Use existing public key for add_recovery_method
+    let existing_public_key = contract
+        .view_access_keys()
+        .await?
+        .into_iter()
+        .next()
+        .unwrap()
+        .public_key;
+    let current_time = chrono::Utc::now().to_rfc3339();
+    let message = format!(
+        "I want to sign in to {} with key {}. The current date is {} UTC",
+        contract.id(),
+        existing_public_key,
+        current_time
+    );
+
+    let signature = solana_keypair.sign_message(message.as_bytes());
+
+    let signature_json = serde_json::to_string(
+        &intear_smart_wallet::ext1_recovery::solana_wallet::SolanaSignature {
+            signature,
+            message: message.clone(),
+        },
+    )?;
+
+    // Add recovery method first
     contract
-        .call("new")
-        .args_json(serde_json::json!({"initial_recovery_method": recovery_method}))
+        .call("ext1_add_recovery_method")
+        .args_json(serde_json::json!({
+            "recovery_method": recovery_method,
+            "message": signature_json.clone()
+        }))
+        .max_gas()
         .transact()
         .await?
         .into_result()?;
 
-    let target_public_key = "ed25519:HbRkc1dTdSLwA1wFTDVNxJE4PCQVmpwwXwTzTGrqdhaP";
-    let current_time = chrono::Utc::now().to_rfc3339();
-    let message = format!(
+    // Use a different random public key for recovery testing
+    let target_public_key = SecretKey::from_random(KeyType::ED25519).public_key();
+    let recovery_message = format!(
         "I want to sign in to {} with key {}. The current date is {} UTC",
         contract.id(),
         target_public_key,
         current_time
     );
 
-    let signature = solana_keypair.sign_message(message.as_bytes());
+    let recovery_signature = solana_keypair.sign_message(recovery_message.as_bytes());
 
-    let signature_json = serde_json::to_string(&intear_smart_wallet::solana::SolanaSignature {
-        signature: signature,
-        message: message.clone(),
-    })?;
+    let recovery_signature_json = serde_json::to_string(
+        &intear_smart_wallet::ext1_recovery::solana_wallet::SolanaSignature {
+            signature: recovery_signature,
+            message: recovery_message.clone(),
+        },
+    )?;
 
     let result = contract
-        .call("recover")
-        .args_json(serde_json::json!({"message": signature_json}))
-        .gas(near_workspaces::types::Gas::from_tgas(300))
+        .call("ext1_recover")
+        .args_json(serde_json::json!({"message": recovery_signature_json}))
+        .max_gas()
         .transact()
         .await?
         .into_result();
 
     assert!(result.is_ok(), "Solana recovery should succeed");
 
-    // Verify that the public key was actually added
-    let target_public_key_parsed: WorkspacesPublicKey = target_public_key.parse()?;
+    // Verify that the new public key was actually added
     let access_key_result = contract
         .as_account()
-        .view_access_key(&target_public_key_parsed)
+        .view_access_key(&target_public_key)
         .await;
 
     assert!(
@@ -77,40 +109,74 @@ async fn test_solana_recovery_with_wrong_signer() -> anyhow::Result<()> {
     let solana_pubkey_bytes = solana_keypair.pubkey().to_bytes();
 
     let recovery_method = RecoveryMethod::Solana(SolanaRecoveryMethod {
-        recovery_wallet_address: intear_smart_wallet::solana::Pubkey(solana_pubkey_bytes),
+        recovery_wallet_address: intear_smart_wallet::ext1_recovery::solana_wallet::Pubkey(
+            solana_pubkey_bytes,
+        ),
     });
 
     let contract = worker.dev_deploy(&contract_wasm).await?;
 
+    // Use existing public key for add_recovery_method
+    let existing_public_key = contract
+        .view_access_keys()
+        .await?
+        .into_iter()
+        .next()
+        .unwrap()
+        .public_key;
+    let current_time = chrono::Utc::now().to_rfc3339();
+    let message = format!(
+        "I want to sign in to {} with key {}. The current date is {} UTC",
+        contract.id(),
+        existing_public_key,
+        current_time
+    );
+
+    let signature = solana_keypair.sign_message(message.as_bytes());
+
+    let signature_json = serde_json::to_string(
+        &intear_smart_wallet::ext1_recovery::solana_wallet::SolanaSignature {
+            signature,
+            message: message.clone(),
+        },
+    )?;
+
+    // Add recovery method first
     contract
-        .call("new")
-        .args_json(serde_json::json!({"initial_recovery_method": recovery_method}))
+        .call("ext1_add_recovery_method")
+        .args_json(serde_json::json!({
+            "recovery_method": recovery_method,
+            "message": signature_json
+        }))
+        .max_gas()
         .transact()
         .await?
         .into_result()?;
 
-    // Try to recover with a different Solana keypair
-    let wrong_keypair = solana_keypair::Keypair::new();
-    let target_public_key = "ed25519:HbRkc1dTdSLwA1wFTDVNxJE4PCQVmpwwXwTzTGrqdhaP";
-    let current_time = chrono::Utc::now().to_rfc3339();
-    let message = format!(
+    // Use a different random public key for recovery testing
+    let target_public_key = SecretKey::from_random(KeyType::ED25519).public_key();
+    let recovery_message = format!(
         "I want to sign in to {} with key {}. The current date is {} UTC",
         contract.id(),
         target_public_key,
         current_time
     );
 
-    let signature = wrong_keypair.sign_message(message.as_bytes());
+    // Try to recover with a different Solana keypair
+    let wrong_keypair = solana_keypair::Keypair::new();
+    let wrong_signature = wrong_keypair.sign_message(recovery_message.as_bytes());
 
-    let signature_json = serde_json::to_string(&intear_smart_wallet::solana::SolanaSignature {
-        signature: signature,
-        message: message.clone(),
-    })?;
+    let wrong_signature_json = serde_json::to_string(
+        &intear_smart_wallet::ext1_recovery::solana_wallet::SolanaSignature {
+            signature: wrong_signature,
+            message: recovery_message.clone(),
+        },
+    )?;
 
     let result = contract
-        .call("recover")
-        .args_json(serde_json::json!({"message": signature_json}))
-        .gas(near_workspaces::types::Gas::from_tgas(300))
+        .call("ext1_recover")
+        .args_json(serde_json::json!({"message": wrong_signature_json}))
+        .max_gas()
         .transact()
         .await?
         .into_result();
@@ -121,10 +187,9 @@ async fn test_solana_recovery_with_wrong_signer() -> anyhow::Result<()> {
     );
 
     // Verify that the public key was NOT added
-    let target_public_key_parsed: WorkspacesPublicKey = target_public_key.parse()?;
     let access_key_result = contract
         .as_account()
-        .view_access_key(&target_public_key_parsed)
+        .view_access_key(&target_public_key)
         .await;
 
     assert!(

@@ -4,6 +4,7 @@ description = "Intear Smart Wallet contract that is deployed for all accounts"
 version = "0.1.0"
 edition = "2024"
 repository = "https://github.com/INTEARnear/wallet-contract"
+license = "MIT"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
