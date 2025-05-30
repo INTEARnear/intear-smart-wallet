@@ -4,7 +4,7 @@ use near_sdk::near;
 
 type Version = u64;
 const MIGRATION_STORAGE_KEY: &[u8] = &[0]; // extensions prefixes start with 1
-const LATEST_STATE_VERSION: Version = 1;
+const LATEST_STATE_VERSION: Version = 2;
 
 const STATE_STORAGE_KEY: &[u8] = b"STATE";
 
@@ -52,6 +52,17 @@ impl Contract {
             *version += 1;
         }
 
+        if *version == 1 {
+            // Added NEP-297 events for indexing
+            let recovery_methods = crate::ext1_recovery::storage_recovery_methods();
+            crate::ext1_recovery::Ext1RecoveryEvent::RecoveryMethodsUpdated(
+                recovery_methods.clone(),
+            )
+            .emit();
+
+            *version += 1;
+        }
+
         MigrationEvent::Migrated {
             from: initial_version,
             to: *version,
@@ -59,12 +70,5 @@ impl Contract {
         .emit();
 
         Contract
-    }
-
-    pub fn has_migrated(&self) -> bool {
-        let version = StorageCell::<Version>::load(MIGRATION_STORAGE_KEY);
-        let has_migrated = *version == LATEST_STATE_VERSION;
-        let never_had_to_migrate = *version == 0;
-        has_migrated || never_had_to_migrate
     }
 }
