@@ -55,7 +55,7 @@ impl Contract {
         if *version == 1 {
             // Added NEP-297 events for indexing
             let recovery_methods = crate::ext1_recovery::storage_recovery_methods();
-            crate::ext1_recovery::Ext1RecoveryEvent::RecoveryMethodsUpdated(
+            crate::ext1_recovery::Ext1RecoveryEvent::Ext1RecoveryMethodsUpdated(
                 recovery_methods.clone(),
             )
             .emit();

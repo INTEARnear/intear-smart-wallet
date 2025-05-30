@@ -61,7 +61,7 @@ async fn test_recovery_methods_updated_event_on_add() -> anyhow::Result<()> {
     assert_eq!(
         outcome.logs(),
         vec![format!(
-            "EVENT_JSON:{{\"standard\":\"intear-smart-wallet\",\"version\":\"1.0.0\",\"event\":\"recovery_methods_updated\",\"data\":[{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}}]}}",
+            "EVENT_JSON:{{\"standard\":\"intear-smart-wallet\",\"version\":\"1.0.0\",\"event\":\"ext1_recovery_methods_updated\",\"data\":[{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}}]}}",
             evm_signer.address().to_string().to_lowercase()
         )]
     );
@@ -104,7 +104,7 @@ async fn test_recovery_methods_updated_event_on_set() -> anyhow::Result<()> {
     assert_eq!(
         outcome.logs(),
         vec![format!(
-            "EVENT_JSON:{{\"standard\":\"intear-smart-wallet\",\"version\":\"1.0.0\",\"event\":\"recovery_methods_updated\",\"data\":[{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}},{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}}]}}",
+            "EVENT_JSON:{{\"standard\":\"intear-smart-wallet\",\"version\":\"1.0.0\",\"event\":\"ext1_recovery_methods_updated\",\"data\":[{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}},{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}}]}}",
             evm_signer1.address().to_string().to_lowercase(),
             evm_signer2.address().to_string().to_lowercase()
         )]
@@ -197,7 +197,7 @@ async fn test_account_recovered_event() -> anyhow::Result<()> {
     assert_eq!(
         outcome.logs(),
         vec![format!(
-            "EVENT_JSON:{{\"standard\":\"intear-smart-wallet\",\"version\":\"1.0.0\",\"event\":\"account_recovered\",\"data\":{{\"recovery_method\":{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}},\"new_public_key\":\"{}\"}}}}",
+            "EVENT_JSON:{{\"standard\":\"intear-smart-wallet\",\"version\":\"1.0.0\",\"event\":\"ext1_account_recovered\",\"data\":{{\"recovery_method\":{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}},\"new_public_key\":\"{}\"}}}}",
             evm_signer.address().to_string().to_lowercase(),
             target_public_key
         )]
@@ -302,7 +302,7 @@ async fn test_multiple_recovery_methods_updated_events() -> anyhow::Result<()> {
     assert_eq!(
         outcome1.logs(),
         vec![format!(
-            "EVENT_JSON:{{\"standard\":\"intear-smart-wallet\",\"version\":\"1.0.0\",\"event\":\"recovery_methods_updated\",\"data\":[{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}}]}}",
+            "EVENT_JSON:{{\"standard\":\"intear-smart-wallet\",\"version\":\"1.0.0\",\"event\":\"ext1_recovery_methods_updated\",\"data\":[{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}}]}}",
             evm_signer1.address().to_string().to_lowercase()
         )]
     );
@@ -310,7 +310,7 @@ async fn test_multiple_recovery_methods_updated_events() -> anyhow::Result<()> {
     assert_eq!(
         outcome2.logs(),
         vec![format!(
-            "EVENT_JSON:{{\"standard\":\"intear-smart-wallet\",\"version\":\"1.0.0\",\"event\":\"recovery_methods_updated\",\"data\":[{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}},{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}}]}}",
+            "EVENT_JSON:{{\"standard\":\"intear-smart-wallet\",\"version\":\"1.0.0\",\"event\":\"ext1_recovery_methods_updated\",\"data\":[{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}},{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}}]}}",
             evm_signer1.address().to_string().to_lowercase(),
             evm_signer2.address().to_string().to_lowercase()
         )]
@@ -466,7 +466,7 @@ async fn test_solana_account_recovered_event() -> anyhow::Result<()> {
     assert_eq!(
         outcome.logs(),
         vec![format!(
-            "EVENT_JSON:{{\"standard\":\"intear-smart-wallet\",\"version\":\"1.0.0\",\"event\":\"account_recovered\",\"data\":{{\"recovery_method\":{{\"Solana\":{{\"recovery_wallet_address\":\"{}\"}}}},\"new_public_key\":\"{}\"}}}}",
+            "EVENT_JSON:{{\"standard\":\"intear-smart-wallet\",\"version\":\"1.0.0\",\"event\":\"ext1_account_recovered\",\"data\":{{\"recovery_method\":{{\"Solana\":{{\"recovery_wallet_address\":\"{}\"}}}},\"new_public_key\":\"{}\"}}}}",
             solana_keypair.pubkey(),
             target_public_key
         )]
@@ -525,7 +525,7 @@ async fn test_mixed_recovery_methods_events() -> anyhow::Result<()> {
     assert_eq!(
         outcome.logs(),
         vec![format!(
-            "EVENT_JSON:{{\"standard\":\"intear-smart-wallet\",\"version\":\"1.0.0\",\"event\":\"recovery_methods_updated\",\"data\":[{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}},{{\"Solana\":{{\"recovery_wallet_address\":\"{}\"}}}}]}}",
+            "EVENT_JSON:{{\"standard\":\"intear-smart-wallet\",\"version\":\"1.0.0\",\"event\":\"ext1_recovery_methods_updated\",\"data\":[{{\"Evm\":{{\"recovery_wallet_address\":\"{}\"}}}},{{\"Solana\":{{\"recovery_wallet_address\":\"{}\"}}}}]}}",
             evm_signer.address().to_string().to_lowercase(),
             solana_keypair.pubkey()
         )]
