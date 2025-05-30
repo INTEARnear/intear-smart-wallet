@@ -139,7 +139,7 @@ Updates that don't affect the stored state and don't require migrations do not i
 This is a global smart contract, where deployments are referenced by `code_hash`. Current deployments with commits:
 | Commit | Code Hash | Network | Changelog |
 |--------|-----------|---------|-----------|
-| [39d53f8426c58481262d7a83f900f2ad32f5261d](https://github.com/INTEARnear/intear-smart-wallet/tree/39d53f8426c58481262d7a83f900f2ad32f5261d) | `Cznw3ewddP9KxNshCCAcNsVkBeJYAAvkT4qcpvva3Bh2` | Testnet | Initial deployment |
-| [7a997ebd696e8fc2f00df427922b3e781a059032](https://github.com/INTEARnear/wallet-contract/tree/7a997ebd696e8fc2f00df427922b3e781a059032) | `FnYhYf2Sq2yEXKxG3yMkbu68jLSTLHRNRNPRbfTF1Z77` | Testnet | Reduced storage usage and implemented migrations |
-| [](https://github.com/INTEARnear/wallet-contract/tree/) | `` | Testnet | Added NEP-297 events for indexing |
+| [39d53f8](https://github.com/INTEARnear/intear-smart-wallet/tree/39d53f8426c58481262d7a83f900f2ad32f5261d) | `Cznw3ewddP9KxNshCCAcNsVkBeJYAAvkT4qcpvva3Bh2` | Testnet | Initial deployment |
+| [7a997eb](https://github.com/INTEARnear/wallet-contract/tree/7a997ebd696e8fc2f00df427922b3e781a059032) | `FnYhYf2Sq2yEXKxG3yMkbu68jLSTLHRNRNPRbfTF1Z77` | Testnet | Reduced storage usage and implemented migrations |
+| [181aa29](https://github.com/INTEARnear/wallet-contract/tree/181aa29e5e2b21a28ce12eacb2b40a845913ea83) | `5VSWnrNQZ2EVGeEAmxiJY64G2KPSd2AqTQf6EFSZreCK` | Testnet | Added NEP-297 events for indexing |
 
