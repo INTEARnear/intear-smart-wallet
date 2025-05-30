@@ -132,6 +132,8 @@ The order is important, and all actions **MUST** be done in one transaction as m
 - `USE_GLOBAL_CONTRACT` updates the code to a newer version (usually the latest version).
 - `after_upgrade()` retrieves the previous version (that was saved when `before_upgrade()` got called), and continually runs all migrations until the new version.
 
+Updates that don't affect the stored state and don't require migrations do not increment the version number, and migration methods (`before_upgrade` and `after_upgrade`) for them are a no-op (except for the first time updating, when `before_upgrade` sets the initial version).
+
 ## Deployments
 
 This is a global smart contract, where deployments are referenced by `code_hash`. Current deployments with commits:
@@ -139,4 +141,5 @@ This is a global smart contract, where deployments are referenced by `code_hash`
 |--------|-----------|---------|-----------|
 | [39d53f8426c58481262d7a83f900f2ad32f5261d](https://github.com/INTEARnear/intear-smart-wallet/tree/39d53f8426c58481262d7a83f900f2ad32f5261d) | `Cznw3ewddP9KxNshCCAcNsVkBeJYAAvkT4qcpvva3Bh2` | Testnet | Initial deployment |
 | [7a997ebd696e8fc2f00df427922b3e781a059032](https://github.com/INTEARnear/wallet-contract/tree/7a997ebd696e8fc2f00df427922b3e781a059032) | `FnYhYf2Sq2yEXKxG3yMkbu68jLSTLHRNRNPRbfTF1Z77` | Testnet | Reduced storage usage and implemented migrations |
+| [](https://github.com/INTEARnear/wallet-contract/tree/) | `` | Testnet | Added NEP-297 events for indexing |
 

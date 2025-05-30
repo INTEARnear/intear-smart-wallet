@@ -62,6 +62,17 @@ pub fn storage_used_signatures() -> LookupSet<CryptoHash> {
     LookupSet::new(STORAGE_KEY_USED_SIGNATURES)
 }
 
+#[near(event_json(standard = "intear-smart-wallet"))]
+pub enum Ext1RecoveryEvent {
+    #[event_version("1.0.0")]
+    RecoveryMethodsUpdated(Vec<RecoveryMethod>),
+    #[event_version("1.0.0")]
+    AccountRecovered {
+        recovery_method: RecoveryMethod,
+        new_public_key: PublicKey,
+    },
+}
+
 #[near]
 impl Ext1Recovery for Contract {
     fn ext1_get_recovery_methods(&self) -> Vec<RecoveryMethod> {
@@ -76,6 +87,7 @@ impl Ext1Recovery for Contract {
         );
         let mut stored_recovery_methods = storage_recovery_methods();
         *stored_recovery_methods = recovery_methods;
+        Ext1RecoveryEvent::RecoveryMethodsUpdated(stored_recovery_methods.clone()).emit();
     }
 
     #[private]
@@ -92,6 +104,7 @@ impl Ext1Recovery for Contract {
                 "Extension 1: Should sign with the same public key as the recovery method"
             );
             recovery_methods.push(recovery_method);
+            Ext1RecoveryEvent::RecoveryMethodsUpdated(recovery_methods.clone()).emit();
         } else {
             near_sdk::env::panic_str("Extension 1: Recovery method check failed");
         }
@@ -104,7 +117,13 @@ impl Ext1Recovery for Contract {
         );
         for recovery_method in storage_recovery_methods().iter() {
             if let Some(public_key) = recovery_method.check(&message) {
-                Promise::new(near_sdk::env::current_account_id()).add_full_access_key(public_key);
+                Promise::new(near_sdk::env::current_account_id())
+                    .add_full_access_key(public_key.clone());
+                Ext1RecoveryEvent::AccountRecovered {
+                    recovery_method: recovery_method.clone(),
+                    new_public_key: public_key,
+                }
+                .emit();
                 return;
             }
         }
