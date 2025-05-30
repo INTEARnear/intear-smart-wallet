@@ -132,18 +132,14 @@ async fn test_can_call_recover_from_different_account() -> anyhow::Result<()> {
     )?;
 
     // Call ext1_recover from different account - should succeed
-    let recover_result = user_account
+    user_account
         .call(contract.id(), "ext1_recover")
         .args_json(serde_json::json!({"message": recovery_signature_json}))
         .max_gas()
         .transact()
         .await?
-        .into_result();
-
-    assert!(
-        recover_result.is_ok(),
-        "Should be able to call ext1_recover from different account"
-    );
+        .into_result()
+        .expect("Failed to call ext1_recover");
 
     // Verify that the new public key was actually added
     let access_key_result = contract

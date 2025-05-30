@@ -1,27 +1,33 @@
 use evm_wallet::EvmRecoveryMethod;
-use near_sdk::{Promise, PublicKey, ext_contract, near, require};
+use near_sdk::{CryptoHash, Promise, PublicKey, ext_contract, near, require, store::LookupSet};
 use solana_wallet::SolanaRecoveryMethod;
 use std::time::Duration;
 
-use crate::{Contract, ContractExt};
+use crate::{Contract, ContractExt, utils::StorageCell};
 
 pub mod evm_wallet;
 pub mod solana_wallet;
 
 pub const MAX_RECOVERY_METHODS: usize = 100;
+const EXTENSION_ID: u8 = 1;
 
+// This trait uses `&self` event for mutating methods because
+// it doesn't really do anything besides storing global contract
+// state, but since state is stored in `StorageCell`s, it's not
+// needed, and will save at least 46 bytes of storage, which at
+// the stage of account creation is sponsored by the wallet.
 #[ext_contract(ext1_recovery)]
 pub trait Ext1Recovery {
     /// Get all recovery methods
     fn ext1_get_recovery_methods(&self) -> Vec<RecoveryMethod>;
     /// Replace the array of recovery methods
-    fn ext1_set_recovery_methods(&mut self, recovery_methods: Vec<RecoveryMethod>);
+    fn ext1_set_recovery_methods(&self, recovery_methods: Vec<RecoveryMethod>);
     /// Add a recovery method. `message` is used to check if the recovery method is valid
     /// and the user has access to it, the format is the same as in [`Ext1Recovery::ext1_recover`].
-    fn ext1_add_recovery_method(&mut self, recovery_method: RecoveryMethod, message: String);
+    fn ext1_add_recovery_method(&self, recovery_method: RecoveryMethod, message: String);
     /// Recover the account using a recovery method. `message` is a JSON string with format
     /// depending on the recovery method, see [`RecoveryMethod`] for more details.
-    fn ext1_recover(&mut self, message: String);
+    fn ext1_recover(&self, message: String);
 }
 
 /// A signature is valid for 5 minutes
@@ -45,27 +51,39 @@ impl RecoveryMethod {
     }
 }
 
+const STORAGE_KEY_RECOVERY_METHODS: &[u8] = &[EXTENSION_ID];
+const STORAGE_KEY_USED_SIGNATURES: &[u8] = &[EXTENSION_ID, b'u'];
+
+pub fn storage_recovery_methods() -> StorageCell<Vec<RecoveryMethod>> {
+    StorageCell::load(STORAGE_KEY_RECOVERY_METHODS)
+}
+
+pub fn storage_used_signatures() -> LookupSet<CryptoHash> {
+    LookupSet::new(STORAGE_KEY_USED_SIGNATURES)
+}
+
 #[near]
 impl Ext1Recovery for Contract {
     fn ext1_get_recovery_methods(&self) -> Vec<RecoveryMethod> {
-        self.ext1_recovery_methods.into_iter().cloned().collect()
+        storage_recovery_methods().clone()
     }
 
     #[private]
-    fn ext1_set_recovery_methods(&mut self, recovery_methods: Vec<RecoveryMethod>) {
+    fn ext1_set_recovery_methods(&self, recovery_methods: Vec<RecoveryMethod>) {
         require!(
             recovery_methods.len() <= MAX_RECOVERY_METHODS,
             "Extension 1: Too many recovery methods"
         );
-        self.ext1_recovery_methods.clear();
-        self.ext1_recovery_methods.extend(recovery_methods);
+        let mut stored_recovery_methods = storage_recovery_methods();
+        *stored_recovery_methods = recovery_methods;
     }
 
     #[private]
-    fn ext1_add_recovery_method(&mut self, recovery_method: RecoveryMethod, message: String) {
+    fn ext1_add_recovery_method(&self, recovery_method: RecoveryMethod, message: String) {
         // It's ok to not guard against replay attacks as this method is private
+        let mut recovery_methods = storage_recovery_methods();
         require!(
-            self.ext1_recovery_methods.len() < MAX_RECOVERY_METHODS as u32,
+            recovery_methods.len() < MAX_RECOVERY_METHODS,
             "Extension 1: Too many recovery methods"
         );
         if let Some(public_key) = recovery_method.check(&message) {
@@ -73,19 +91,18 @@ impl Ext1Recovery for Contract {
                 near_sdk::env::signer_account_pk() == public_key,
                 "Extension 1: Should sign with the same public key as the recovery method"
             );
-            self.ext1_recovery_methods.push(recovery_method);
+            recovery_methods.push(recovery_method);
         } else {
             near_sdk::env::panic_str("Extension 1: Recovery method check failed");
         }
     }
 
-    fn ext1_recover(&mut self, message: String) {
+    fn ext1_recover(&self, message: String) {
         require!(
-            self.ext1_used_signatures
-                .insert(near_sdk::env::sha256_array(message.as_bytes())),
+            storage_used_signatures().insert(near_sdk::env::sha256_array(message.as_bytes())),
             "Extension 1: Already used this message"
         );
-        for recovery_method in &self.ext1_recovery_methods {
+        for recovery_method in storage_recovery_methods().iter() {
             if let Some(public_key) = recovery_method.check(&message) {
                 Promise::new(near_sdk::env::current_account_id()).add_full_access_key(public_key);
                 return;

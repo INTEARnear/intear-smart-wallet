@@ -118,9 +118,25 @@ Where:
 
 **Important:** The signature timestamp must be within 5 minutes of the current block time and cannot be in the future (compared to `near_sdk::env::block_timestamp_ms()`).
 
+## Migration
+
+Initial contract deployments are meant to be sponsored by a relayer, but upgrades are meant to be funded by the user, because at least 45 bytes of storage is required for storing the version for running migrations.
+
+The migration process is as follows:
+- `before_upgrade()`
+- `USE_GLOBAL_CONTRACT` with new code
+- `after_upgrade()`
+
+The order is important, and all actions **MUST** be done in one transaction as multiple actions to avoid broken state. Technical explanation of the process:
+- `before_upgrade()` sets the current migration number in storage (because it's not set by default, since we're trying to minimize the storage cost for the period while the user has no funds).
+- `USE_GLOBAL_CONTRACT` updates the code to a newer version (usually the latest version).
+- `after_upgrade()` retrieves the previous version (that was saved when `before_upgrade()` got called), and continually runs all migrations until the new version.
+
 ## Deployments
 
 This is a global smart contract, where deployments are referenced by `code_hash`. Current deployments with commits:
-| Commit | Code Hash | Network |
-|--------|-----------|---------|
-| [39d53f8426c58481262d7a83f900f2ad32f5261d](https://github.com/INTEARnear/intear-smart-wallet/tree/39d53f8426c58481262d7a83f900f2ad32f5261d) | `Cznw3ewddP9KxNshCCAcNsVkBeJYAAvkT4qcpvva3Bh2` | Testnet |
+| Commit | Code Hash | Network | Changelog |
+|--------|-----------|---------|-----------|
+| [39d53f8426c58481262d7a83f900f2ad32f5261d](https://github.com/INTEARnear/intear-smart-wallet/tree/39d53f8426c58481262d7a83f900f2ad32f5261d) | `Cznw3ewddP9KxNshCCAcNsVkBeJYAAvkT4qcpvva3Bh2` | Testnet | Initial deployment |
+| [7a997ebd696e8fc2f00df427922b3e781a059032](https://github.com/INTEARnear/wallet-contract/tree/7a997ebd696e8fc2f00df427922b3e781a059032) | `FnYhYf2Sq2yEXKxG3yMkbu68jLSTLHRNRNPRbfTF1Z77` | Testnet | Reduced storage usage and implemented migrations |
+
